@@ -1,0 +1,17 @@
+# Site wide configuration
+
+title: Hayden's Blog
+description: A simple and clean blog for words and photos.
+baseurl: /  # must end with /
+
+# Jekyll configuration
+
+markdown: kramdown
+
+exclude: ["README.md"]
+
+permalink: /:year/:month/:title.html
+
+# Private configuration
+
+mygithub: https://github.com/haydenliang13
