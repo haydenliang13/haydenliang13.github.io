@@ -1,12 +1,16 @@
 ---
 layout: post
 title: APUE笔记 —— 进程的权限
-categories: C Linux
-tags: APUE 文件I/O 权限
+category: APUE
+tags: 文件I/O 进程
 ---
 
 APUE笔记 —— 进程的权限
 ========================================
+
+
+
+
 
 一、权限的概念
 ----------------------------------------
@@ -15,68 +19,79 @@ APUE笔记 —— 进程的权限
 
 ### 1.1 不读写文件的程序
 
-	#include <stdio.h>
-	#include <stdlib.h>
+```
+#include <stdio.h>
+#include <stdlib.h>
 
-	int
-	main(void) {
-		int sum = 0, i;
+int
+main(void) {
+	int sum = 0, i;
 
-		for (i = 1; i <= 100; i++) {
-			sum += i;
-		}
-
-		printf("sum = %d\n", sum);
-
-		exit(0);
+	for (i = 1; i <= 100; i++) {
+		sum += i;
 	}
+
+	printf("sum = %d\n", sum);
+
+	exit(0);
+}
+```
 
 这是一个计算从1加到100的和的程序，这个程序并不打开其他文件（读写或执行），所以这个程序并不需要关注权限的问题，只要你有执行这个二进制文件（程序本身）的权限就可以输出结果。
 
 ### 1.2 读写文件的程序
 
-	#include <stdio.h>
-	#include <stdlib.h>
+```
+#include <stdio.h>
+#include <stdlib.h>
 
-	int
-	main(void) {
-		FILE *fp;
-		char ch;
+int
+main(void) {
+	FILE *fp;
+	char ch;
 
-		if ((fp = fopen("test.txt", "rt")) == NULL) {
-			perror("a.out cannot open file");
-			exit(1);
-		}
-		ch = fgetc(fp);
-		while (ch != EOF) {
-			putchar(ch);
-			ch = fgetc(fp);
-		}
-		fclose(fp);
-
-		exit(0);
+	if ((fp = fopen("test.txt", "rt")) == NULL) {
+		perror("a.out cannot open file");
+		exit(1);
 	}
+	ch = fgetc(fp);
+	while (ch != EOF) {
+		putchar(ch);
+		ch = fgetc(fp);
+	}
+	fclose(fp);
+
+	exit(0);
+}
+```
 
 第二个程序打开了一个文本文件`test.txt`，平常的编程中，我们并不需要关注权限的问题，因为我们通常都是自己编译程序，两个文件的所有者都是同一个用户，自然具有读写权限，如下：
 
-	$ ls -la
-	-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
-	-rw-r--r-- 1 harvey users   14 Mar 24 11:02 test.txt
+```
+$ ls -la
+-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+-rw-r--r-- 1 harvey users   14 Mar 24 11:02 test.txt
 
-	$ ./a.out
-	Hello, world!
+$ ./a.out
+Hello, world!
+```
 
 如果我们把`test.txt`文件的所有者和组改成其他用户，并去掉其他用户的权限（即我们不具有权限读写文件），那么程序就不可以输出文件的内容了：
 
-	$ chmod o-r test.txt
-	$ sudo chown stuart:stuart test.txt
-	$ ls -la
-	-rwxr-xr-x 1 harvey users  8624 Mar 24 11:04 a.out
-	-rw-r----- 1 stuart stuart   14 Mar 24 11:02 test.txt
-	$ ./a.out
-	a.out cannot open file: Permission denied
+```
+$ chmod o-r test.txt
+$ sudo chown stuart:stuart test.txt
+$ ls -la
+-rwxr-xr-x 1 harvey users  8624 Mar 24 11:04 a.out
+-rw-r----- 1 stuart stuart   14 Mar 24 11:02 test.txt
+$ ./a.out
+a.out cannot open file: Permission denied
+```
 
 由以上两个程序可见，只有读写执行其他文件的程序才需要关注进程的权限，而进程的权限只有与打开的文件的权限两者结合才有意义。
+
+
+
 
 
 二、文件的权限
@@ -84,17 +99,21 @@ APUE笔记 —— 进程的权限
 
 就像以上所说，进程的权限与文件的权限息息相关，进程是否可以使用一个文件（读写执行）取决于该文件所需的权限，以下我们来了解什么是文件的权限。
 
-	$ ls -la
-	total 28
-	drwxr-xr-x 2 harvey users  4096 Mar 24 11:04 .
-	drwx------ 7 harvey users  4096 Mar 24 11:04 ..
-	-rwxr-xr-x 1 harvey users  8624 Mar 24 11:04 a.out
-	-rw-r--r-- 1 harvey users   330 Mar 24 11:03 test.c
-	-rw-r----- 1 stuart stuart   14 Mar 24 11:02 text.txt
+```
+$ ls -la
+total 28
+drwxr-xr-x 2 harvey users  4096 Mar 24 11:04 .
+drwx------ 7 harvey users  4096 Mar 24 11:04 ..
+-rwxr-xr-x 1 harvey users  8624 Mar 24 11:04 a.out
+-rw-r--r-- 1 harvey users   330 Mar 24 11:03 test.c
+-rw-r----- 1 stuart stuart   14 Mar 24 11:02 text.txt
+```
 
 我们可以看到用`ls -la`命令列出当前目录的所有文件，每一个文件的最前面都有`drwx`等字符，这些字符就代表了文件权限，如：
 
-	-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+```
+-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+```
 
 前面10个字符中，第一个字符代表了这个文件是什么类型的文件，`d`代表目录，`-`代表普通文件。
 
@@ -102,17 +121,19 @@ APUE笔记 —— 进程的权限
 
 那为什么一个文件有三组rwx呢？因为三组rwx对应三种用户对这个文件的权限：
 
-* 第一组rwx，对应文件拥有者的权限，在这里是用户harvey的权限
-* 第二组rwx，对应文件所属组用户的权限，在这里是组users，即组users成员用户的权限
-* 第三组rwx，对应其他用户（不是以上两种用户）的权限，在这里是指不是harvey用户也不是组users的用户
++  第一组rwx，对应文件拥有者的权限，在这里是用户harvey的权限
++  第二组rwx，对应文件所属组用户的权限，在这里是组users，即组users成员用户的权限
++  第三组rwx，对应其他用户（不是以上两种用户）的权限，在这里是指不是harvey用户也不是组users的用户
 
 我们在来分析一下`a.out`这个文件，每种用户都具有什么权限：
 
-	-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+```
+-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+```
 
-* harvey用户：harvey用户就是这个文件的所有者，对应第一组rwx，他具有读`r`、写`w`和执行`x`权限
-* 组users用户：组users是这个文件的所属组，组users成员用户对应于第二组rwx，具有读`r`和执行`x`权限
-* 其他用户：不是以上两种用户的stuart用户，他具有读`r`和执行`x`权限
++  harvey用户：harvey用户就是这个文件的所有者，对应第一组rwx，他具有读`r`、写`w`和执行`x`权限
++  组users用户：组users是这个文件的所属组，组users成员用户对应于第二组rwx，具有读`r`和执行`x`权限
++  其他用户：不是以上两种用户的stuart用户，他具有读`r`和执行`x`权限
 
 文件的权限决定了一个用户可以对它执行的操作（读写执行）。
 
@@ -132,10 +153,13 @@ APUE笔记 —— 进程的权限
 
 目录文件读写执行的含义与普通文件的含义有些不同：
 
-* 目录的读权限允许我们读目录，获得该目录中所有文件名的列表
-* 目录的执行权限允许我们通过（进入）该目录，并搜索该目录下的特定文件
-* 为了在一个目录中创建一个文件，需要该目录的写权限和执行权限
-* 为了在一个目录中删除一个文件，需要包含该文件的目录的写权限和执行权限，但不需要文件本身的读写权限
++  目录的读权限允许我们读目录，获得该目录中所有文件名的列表
++  目录的执行权限允许我们通过（进入）该目录，并搜索该目录下的特定文件
++  为了在一个目录中创建一个文件，需要该目录的写权限和执行权限
++  为了在一个目录中删除一个文件，需要包含该文件的目录的写权限和执行权限，但不需要文件本身的读写权限
+
+
+
 
 
 三、进程的权限
@@ -149,19 +173,19 @@ APUE笔记 —— 进程的权限
 
 与一个进程相关的ID有6个或更多：
 
-* 实际用户ID
-* 实际组ID
-* 有效用户ID
-* 有效组ID
-* 附加组ID
-* 保存的设置用户ID
-* 保存的设置组ID
++  实际用户ID
++  实际组ID
++  有效用户ID
++  有效组ID
++  附加组ID
++  保存的设置用户ID
++  保存的设置组ID
 
 进程的权限基本由这6个ID来决定。
 
-* 实际用户ID和实际组ID标识我们究竟是谁，即执行程序的用户和组
-* 有效用户ID、有效组ID和附加组ID决定了我们的文件访问权限
-* 保存的设置用户ID和保存的设置组ID在这里不讨论
++  实际用户ID和实际组ID标识我们究竟是谁，即执行程序的用户和组
++  有效用户ID、有效组ID和附加组ID决定了我们的文件访问权限
++  保存的设置用户ID和保存的设置组ID在这里不讨论
 
 如上面所说，进程可以看做是一个用户，这个用户就由有效用户ID、有效组ID和附加组ID来决定。
 
@@ -175,31 +199,35 @@ APUE笔记 —— 进程的权限
 
 我们可以在文件的权限中设置：当执行此文件（程序）时，将进程的有效用户ID设置为文件所有者ID，与此类似，也可以设置当执行文件时有效组ID等于文件的组的ID。
 
-	$ ls -la a.out
-	-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
-	$ chmod u+s a.out
-	$ ls -la a.out
-	-rwsr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
-	$ chmod g+s a.out
-	$ ls -la a.out
-	-rwsr-sr-x 1 harvey users 8624 Mar 24 11:04 a.out
+```
+$ ls -la a.out
+-rwxr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+$ chmod u+s a.out
+$ ls -la a.out
+-rwsr-xr-x 1 harvey users 8624 Mar 24 11:04 a.out
+$ chmod g+s a.out
+$ ls -la a.out
+-rwsr-sr-x 1 harvey users 8624 Mar 24 11:04 a.out
+```
 
 我们可以看到，上面的`a.out`文件的所有者权限和组权限中的执行位为`s`，这表示当执行此程序时，有效用户ID和有效组ID都会设置为文件所有者和组的ID，而不是实际用户和实际组ID（执行程序的用户和组ID）。
 
 Linux系统中的passwd命令就使用了这种方法。因为该程序应该能将用户的新密码写入密码文件（/etc/shadow）中，而只有超级用户才具有对密码文件的写权限，所以需要使用设置用户ID的方法来实现。
 
-	$ ls -la /usr/bin/passwd
-	-rwsr-xr-x 1 root root 52528 Oct 29 23:54 /usr/bin/passwd
-	$ ls -la /etc/shadow
-	-rw------- 1 root root 852 Mar 24 12:04 /etc/shadow
+```
+$ ls -la /usr/bin/passwd
+-rwsr-xr-x 1 root root 52528 Oct 29 23:54 /usr/bin/passwd
+$ ls -la /etc/shadow
+-rw------- 1 root root 852 Mar 24 12:04 /etc/shadow
+```
 
 ### 3.3 内核权限测试
 
 最后在给出内核对进程的权限测试过程：
 
-1. 若进程的有效用户ID是0（root用户），则允许访问，root用户具有最高权限
-2. 若进程的有效用户ID等于文件的所有者ID，那么测试文件所有者是否具有对应权限（第一组rwx）
-3. 若进程的有效组ID或进程的附加组ID之一等于文件的组ID，那么测试文件组ID的权限（第二组rwx）
-4. 测试其他用户是否具有对应权限（第三组rwx），进程如果不属于以上三种用户，则必定是其他用户
+1.  若进程的有效用户ID是0（root用户），则允许访问，root用户具有最高权限
+2.  若进程的有效用户ID等于文件的所有者ID，那么测试文件所有者是否具有对应权限（第一组rwx）
+3.  若进程的有效组ID或进程的附加组ID之一等于文件的组ID，那么测试文件组ID的权限（第二组rwx）
+4.  测试其他用户是否具有对应权限（第三组rwx），进程如果不属于以上三种用户，则必定是其他用户
 
 内核按顺序执行这四步，注意，如果进程拥有此文件（第2步），则按用户访问权限批准或拒绝进程对文件的访问，无论是批准还是拒绝，都不会继续测试下面两步（组和其他用户）。其余3步都是如此处理——如果是root用户，第一步通过，不测试下面三步。
